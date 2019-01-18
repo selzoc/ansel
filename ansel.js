@@ -118,7 +118,7 @@ DeltaRecords.prototype.leavingProject = function(person, project, location) {
 }
 
 DeltaRecords.prototype.joiningProject = function(person, project, location) {
-  if (this.records[person.id]) {
+  if (this.records[person.id]&& this.records[person.id].addJoiningProject) {
     this.records[person.id].addJoiningProject(project)
   } else {
     this.records[person.id] = new RotationDelta({
@@ -339,13 +339,13 @@ TimelinesParser.prototype.parse = function(projectData) {
       if (deltaDetector.leavingProject()) {
         deltaRecords.leavingProject(person, currentProject, location);
       }
-      else if (deltaDetector.joiningProject()) {
+      if (deltaDetector.joiningProject()) {
         deltaRecords.joiningProject(person, currentProject, location);
       }
-      else if (deltaDetector.goingOnVacation()) {
+      if (deltaDetector.goingOnVacation()) {
         deltaRecords.goingOnVacation(person, currentProject, location);
       }
-      else if (deltaDetector.returningFromVacation()) {
+      if (deltaDetector.returningFromVacation()) {
         deltaRecords.returningFromVacation(person, currentProject, location);
       }
     }
