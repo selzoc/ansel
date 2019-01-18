@@ -85,7 +85,7 @@ function(records) {
     ansel_formatter: 'html',
   }, async function(items) {
     var ansel = new Ansel(items.ansel_formatter, locationMap, projectMap);
-    var result = await ansel.snapshot(records);
+    const result = await ansel.snapshot(records);
     chrome.runtime.sendMessage({ansel_snapshot: result})
   });
 });
