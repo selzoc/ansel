@@ -171,23 +171,21 @@ function HtmlRenderer(locationMap, projectMap) {
 
 //TODO: opportunity here to have a base renderer that handles record adding.
 HtmlRenderer.prototype.addRecord = function(record) {
-  console.log(this.locationMap)
-  console.log(record.person.location)
   this.result[record.type()].push({
     "going-on-vacation": function(record, locationMap, projectMap) {
-      return "(" + /*locationMap(*/record.person.location/*)*/ + ") <strong>" + record.person.name + "</strong> taking a vacation from <strong>" + projectMap(record.project) + "</strong>";
+      return "(" + locationMap(record.person.location) + ") <strong>" + record.person.name + "</strong> taking a vacation from <strong>" + projectMap(record.project) + "</strong>";
     },
     "returning-from-vacation": function(record, locationMap, projectMap) {
-      return "(" + /*locationMap(*/record.person.location/*)*/ + ") <strong>" + record.person.name + "</strong> returning to <strong>" + projectMap(record.project) + "</strong>";
+      return "(" + locationMap(record.person.location) + ") <strong>" + record.person.name + "</strong> returning to <strong>" + projectMap(record.project) + "</strong>";
     },
     "rotation": function(record, locationMap, projectMap) {
       if (!record.leavingProject.id) {
-        return "(" + /*locationMap(*/record.person.location/*)*/ + ") <strong>" + record.person.name + "</strong> joining <strong>" + projectMap(record.joiningProject) + "</strong>";
+        return "(" + locationMap(record.person.location) + ") <strong>" + record.person.name + "</strong> joining <strong>" + projectMap(record.joiningProject) + "</strong>";
       }
       if (!record.joiningProject.id) {
-        return "(" + /*locationMap(*/record.person.location/*)*/ + ") <strong>" + record.person.name + "</strong> rolling off <strong>" + projectMap(record.leavingProject) + "</strong>";
+        return "(" + locationMap(record.person.location) + ") <strong>" + record.person.name + "</strong> rolling off <strong>" + projectMap(record.leavingProject) + "</strong>";
       }
-      return "(" + /*locationMap(*/record.person.location/*)*/ + ") <strong>" + record.person.name + "</strong> rotating from <strong>" + projectMap(record.leavingProject) + "</strong> to <strong>" +  projectMap(record.joiningProject) + "</strong>";
+      return "(" + locationMap(record.person.location) + ") <strong>" + record.person.name + "</strong> rotating from <strong>" + projectMap(record.leavingProject) + "</strong> to <strong>" +  projectMap(record.joiningProject) + "</strong>";
     }
   }[record.type()](record, this.locationMap, this.projectMap))
 }
@@ -218,7 +216,6 @@ function Location(data) {
 function MapFactory(map) {
   map = map || {};
   return function(value) {
-    console.log(map)
     return map[value.name] || value.name;
   }
 }
@@ -331,11 +328,7 @@ TimelinesParser.prototype.parse = async function(projectData) {
         return; //no tests for this.
       }
       var person = new Person(slot.person);
-
-      var response = await fetch(`https://panorama.pivotal.io/api/people/${person.id}`);
-      var responseJSON = await response.json();
-      person.location = await responseJSON.location.name;
-      console.log(`${person.name} lives in ${person.location}`);
+      await addLocationToPerson(person)
 
       var week1 = new Week(slot.weeks[0]);
       var week2 = new Week(slot.weeks[1]);
@@ -353,36 +346,15 @@ TimelinesParser.prototype.parse = async function(projectData) {
         deltaRecords.returningFromVacation(person, currentProject, location);
       }
     }
-
-    // await record.slots.forEach(async (slot) => {
-    //   if (!slot.person) {
-    //     return; //no tests for this.
-    //   }
-    //   var person = new Person(slot.person);
-
-    //   // var response = await fetch(`https://panorama.pivotal.io/api/people/${person.id}`);
-    //   // var responseJSON = await response.json();
-    //   // person.location = responseJSON.location.name;
-    //   // console.log(`${person.name} lives in ${person.location}`);
-
-    //   var week1 = new Week(slot.weeks[0]);
-    //   var week2 = new Week(slot.weeks[1]);
-    //   var deltaDetector = new DeltaDetector(week1, week2);
-    //   if (deltaDetector.leavingProject()) {
-    //     deltaRecords.leavingProject(person, currentProject, location);
-    //   }
-    //   if (deltaDetector.joiningProject()) {
-    //     deltaRecords.joiningProject(person, currentProject, location);
-    //   }
-    //   if (deltaDetector.goingOnVacation()) {
-    //     deltaRecords.goingOnVacation(person, currentProject, location);
-    //   }
-    //   if (deltaDetector.returningFromVacation()) {
-    //     deltaRecords.returningFromVacation(person, currentProject, location);
-    //   }
-    // })
   }));
+
   return deltaRecords;
+}
+
+async function addLocationToPerson(person) {
+  var response = await fetch(`https://panorama.pivotal.io/api/people/${person.id}`);
+  var responseJSON = await response.json();
+  person.location = await responseJSON.location;
 }
 
 function Vacation() {

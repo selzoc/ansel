@@ -44,7 +44,12 @@ function(records) {
     "Dublin": "DUB",
     "Seattle": "SEA",
     "Remote Office": "REM",
-    "Colorado": "DEN"
+    "Colorado": "DEN",
+    "Santa Monica": "LA",
+    "Dallas": "DAL",
+    "Washington D.C.": "DC",
+    "Chicago": "CHI",
+    "Boston": "BOS",
   };
 
   var projectMap = {
@@ -81,7 +86,6 @@ function(records) {
   }, async function(items) {
     var ansel = new Ansel(items.ansel_formatter, locationMap, projectMap);
     var result = await ansel.snapshot(records);
-    console.log("done awaiting!")
     chrome.runtime.sendMessage({ansel_snapshot: result})
   });
 });
