@@ -42,8 +42,14 @@ function(records) {
     "Toronto": "TOR",
     "Palo Alto": "PA",
     "Dublin": "DUB",
+    "Seattle": "SEA",
+    "Remote Office": "REM",
     "Colorado": "DEN",
-    "Santa Monica": "LA"
+    "Santa Monica": "LA",
+    "Dallas": "DAL",
+    "Washington D.C.": "DC",
+    "Chicago": "CHI",
+    "Boston": "BOS",
   };
 
   var projectMap = {
@@ -103,9 +109,9 @@ function(records) {
 
   chrome.storage.sync.get({
     ansel_formatter: 'html',
-  }, function(items) {
+  }, async function(items) {
     var ansel = new Ansel(items.ansel_formatter, locationMap, projectMap);
-    var result = ansel.snapshot(records);
+    const result = await ansel.snapshot(records);
     chrome.runtime.sendMessage({ansel_snapshot: result})
   });
 });

@@ -41,11 +41,12 @@ var Ansel = function(renderer, locationMap, projectMap) {
   this.projectMap = new MapFactory(projectMap || {});
 }
 
-Ansel.prototype.snapshot = function(data) {
+Ansel.prototype.snapshot = async function(data) {
   var renderer = new this.renderer(this.locationMap, this.projectMap);
   var timelinesParser = new TimelinesParser();
   var deltaRecords = timelinesParser.parse(data)
-  var result = {content_type: renderer.content_type(), content_body: deltaRecords.render(renderer)}
+  const renderedRecords = await deltaRecords.render(renderer)
+  var result = {content_type: renderer.content_type(), content_body: renderedRecords}
   return result;
 }
 
@@ -128,10 +129,11 @@ DeltaRecords.prototype.joiningProject = function(person, project, location) {
   }
 }
 
-DeltaRecords.prototype.render = function(renderer) {
-  $.each(this.records, function(index, record) {
-    renderer.addRecord(record);
-  });
+DeltaRecords.prototype.render = async function(renderer) {
+  for await (const record of Object.values(this.records)) {
+    await renderer.addRecord(record);
+  }
+
   return renderer.render();
 }
 
@@ -170,22 +172,24 @@ function HtmlRenderer(locationMap, projectMap) {
 }
 
 //TODO: opportunity here to have a base renderer that handles record adding.
-HtmlRenderer.prototype.addRecord = function(record) {
+HtmlRenderer.prototype.addRecord = async function(record) {
+  const personLocation = await getPersonLocation(record.person)
+
   this.result[record.type()].push({
     "going-on-vacation": function(record, locationMap, projectMap) {
-      return "(" + locationMap(record.location) + ") <strong>" + record.person.name + "</strong> taking a vacation from <strong>" + projectMap(record.project) + "</strong>";
+      return "(" + locationMap(personLocation) + ") <strong>" + record.person.name + "</strong> taking a vacation from <strong>" + projectMap(record.project) + "</strong>";
     },
     "returning-from-vacation": function(record, locationMap, projectMap) {
-      return "(" + locationMap(record.location) + ") <strong>" + record.person.name + "</strong> returning to <strong>" + projectMap(record.project) + "</strong>";
+      return "(" + locationMap(personLocation) + ") <strong>" + record.person.name + "</strong> returning to <strong>" + projectMap(record.project) + "</strong>";
     },
     "rotation": function(record, locationMap, projectMap) {
       if (!record.leavingProject.id) {
-        return "(" + locationMap(record.location) + ") <strong>" + record.person.name + "</strong> joining <strong>" + projectMap(record.joiningProject) + "</strong>";
+        return "(" + locationMap(personLocation) + ") <strong>" + record.person.name + "</strong> joining <strong>" + projectMap(record.joiningProject) + "</strong>";
       }
       if (!record.joiningProject.id) {
-        return "(" + locationMap(record.location) + ") <strong>" + record.person.name + "</strong> rolling off <strong>" + projectMap(record.leavingProject) + "</strong>";
+        return "(" + locationMap(personLocation) + ") <strong>" + record.person.name + "</strong> rolling off <strong>" + projectMap(record.leavingProject) + "</strong>";
       }
-      return "(" + locationMap(record.location) + ") <strong>" + record.person.name + "</strong> rotating from <strong>" + projectMap(record.leavingProject) + "</strong> to <strong>" +  projectMap(record.joiningProject) + "</strong>";
+      return "(" + locationMap(personLocation) + ") <strong>" + record.person.name + "</strong> rotating from <strong>" + projectMap(record.leavingProject) + "</strong> to <strong>" +  projectMap(record.joiningProject) + "</strong>";
     }
   }[record.type()](record, this.locationMap, this.projectMap))
 }
@@ -231,6 +235,12 @@ function ReturningFromVacationDelta(data) {
   this.person = data.person;
   this.project = data.project;
   this.location = data.location;
+}
+
+async function getPersonLocation(person) {
+  const response = await fetch(`https://panorama.pivotal.io/api/people/${person.id}`);
+  const responseJSON = await response.json();
+  return await responseJSON.location;
 }
 
 ReturningFromVacationDelta.prototype.type = function() {
